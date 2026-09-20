@@ -41,6 +41,7 @@ internal class DrawChar
   };
 
   static readonly Dictionary<FontType, SKTypeface> Typefaces = new();
+  static Dictionary<FontType, System.Drawing.Font> WindowsFonts;
 
   static SKTypeface GetTypeface(FontType fontType)
   {
@@ -87,10 +88,35 @@ internal class DrawChar
     return bitmap;
   }
 
-  static public VALUE[,] CharToValues(char c, StyleType type = StyleType.BOTTOM_RIGHT, FontType fontType = FontType.SONG_TI, int posX = -2, int posY = 1, int w = 16, int h = 16)
+  static byte[,] RenderGlyph(char c, FontType fontType, int posX, int posY, int width, int height)
   {
-    using var bitmap = new SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul);
-    using var canvas = new SKCanvas(bitmap);
+    var alpha = new byte[height, width];
+    if (OperatingSystem.IsWindowsVersionAtLeast(6, 1) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PCTR_FONT_DIR")))
+    {
+      WindowsFonts ??= new()
+      {
+        { FontType.SONG_TI, new System.Drawing.Font("新宋体", 12, System.Drawing.GraphicsUnit.Pixel) },
+        { FontType.HEI_TI, new System.Drawing.Font("黑体", 12, System.Drawing.GraphicsUnit.Pixel) },
+        { FontType.MS_GOTHIC, new System.Drawing.Font("MS Gothic", 12, System.Drawing.GraphicsUnit.Pixel) },
+        { FontType.PIXEL_9, new System.Drawing.Font("Zfull-GB", 9, System.Drawing.GraphicsUnit.Pixel) },
+      };
+      using var bitmap = new System.Drawing.Bitmap(width, height);
+      using var graphics = System.Drawing.Graphics.FromImage(bitmap);
+      using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.Black);
+      graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+      graphics.DrawString(c.ToString(), WindowsFonts[fontType], brush, new System.Drawing.Point(posX, posY));
+      for (int x = 0; x < width; x++)
+      {
+        for (int y = 0; y < height; y++)
+        {
+          alpha[y, x] = bitmap.GetPixel(x, y).A;
+        }
+      }
+      return alpha;
+    }
+
+    using var skBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+    using var canvas = new SKCanvas(skBitmap);
     canvas.Clear(SKColors.Transparent);
     using var paint = new SKPaint
     {
@@ -104,6 +130,19 @@ internal class DrawChar
     var baseline = posY - font.Metrics.Ascent;
     canvas.DrawText(c.ToString(), posX, baseline, SKTextAlign.Left, font, paint);
     canvas.Flush();
+    for (int x = 0; x < width; x++)
+    {
+      for (int y = 0; y < height; y++)
+      {
+        alpha[y, x] = skBitmap.GetPixel(x, y).Alpha;
+      }
+    }
+    return alpha;
+  }
+
+  static public VALUE[,] CharToValues(char c, StyleType type = StyleType.BOTTOM_RIGHT, FontType fontType = FontType.SONG_TI, int posX = -2, int posY = 1, int w = 16, int h = 16)
+  {
+    var alpha = RenderGlyph(c, fontType, posX, posY, w, h);
 
     int x, y;
     VALUE[,] v = new VALUE[w, h];
@@ -122,7 +161,7 @@ internal class DrawChar
         {
           for (y = 0; y < h - 1; y++)
           {
-            if (bitmap.GetPixel(x, y).Alpha > 200)
+            if (alpha[y, x] > 200)
             {
               v[y, x] = VALUE.VALUE_1;
               v[y + 1, x] = VALUE.VALUE_2;
@@ -137,7 +176,7 @@ internal class DrawChar
         {
           for (y = h - 2; y > -1; y--)
           {
-            if (bitmap.GetPixel(x, y).Alpha > 200)
+            if (alpha[y, x] > 200)
             {
               v[y + 1, x + 1] = VALUE.VALUE_1;
               v[y, x + 1] = VALUE.VALUE_3;
@@ -152,7 +191,7 @@ internal class DrawChar
         {
           for (y = 0; y < h - 2; y++)
           {
-            if (bitmap.GetPixel(x, y).Alpha > 200)
+            if (alpha[y, x] > 200)
             {
               v[y + 1, x + 1] = VALUE.VALUE_1;
               v[y, x] = v[y, x] == VALUE.VALUE_0 ? VALUE.VALUE_2 : v[y, x];
