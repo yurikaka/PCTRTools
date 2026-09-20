@@ -66,7 +66,7 @@ internal class FontTable
     {
       for (int i = 1; i < Table.Items.Length; i++)
       {
-        DrawChar.ValuesToBitmap(Table.Items[i - 1].Item).Save(Path.Combine(path, $"{i:X4}.png"));
+        DrawChar.SaveValuesToPng(Table.Items[i - 1].Item, Path.Combine(path, $"{i:X4}.png"));
       }
       return true;
     }

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
@@ -19,7 +19,7 @@
     <None Include="..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NARCFileReadingDLL\NARCFileReadingDLL.csproj" />
+    <ProjectReference Include="..\NARCFileReadingDLL.Net8\NARCFileReadingDLL.Net8.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
@@ -44,7 +44,8 @@
     </PackageReference>
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' != 'net48' ">
-    <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" Condition="'$(OS)' != 'Windows_NT'" />
   </ItemGroup>
 </Project>
